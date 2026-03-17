@@ -24,276 +24,324 @@ API = "https://smart-waste-backend-vtop.onrender.com"
 # ─── GLOBAL CSS ────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
 
-  /* ─ Base reset */
   html, body, [class*="css"] {
-    font-family: 'JetBrains Mono', monospace !important;
-    background: #060e08 !important;
-    color: #c8f0c8 !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    background: #020b06 !important;
+    color: #e0ffe0 !important;
   }
-  .stApp { background: #060e08 !important; }
-  .block-container { padding: 2rem 2.5rem 3rem !important; max-width: 1400px !important; }
+  .stApp {
+    background: radial-gradient(ellipse at 20% 20%, #021a08 0%, #020b06 50%, #000d04 100%) !important;
+  }
+  .stApp::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image:
+      linear-gradient(rgba(0,255,80,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,80,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .block-container { padding: 2rem 3rem 3rem !important; max-width: 1500px !important; position: relative; z-index: 1; }
 
   /* ─ Sidebar */
   [data-testid="stSidebar"] {
-    background: #0a1a0e !important;
-    border-right: 1px solid #1a3a20 !important;
+    background: linear-gradient(180deg, #010f04 0%, #020b06 100%) !important;
+    border-right: 1px solid rgba(0,255,80,0.15) !important;
+    box-shadow: 4px 0 30px rgba(0,255,80,0.05) !important;
   }
-  [data-testid="stSidebar"] > div { padding: 1.5rem 1rem !important; }
 
   /* ─ Tabs */
   .stTabs [data-baseweb="tab-list"] {
     background: transparent !important;
-    border-bottom: 1px solid #1a3a20 !important;
+    border-bottom: 1px solid rgba(0,255,80,0.2) !important;
     gap: 0 !important;
   }
   .stTabs [data-baseweb="tab"] {
-    font-family: 'Space Grotesk', sans-serif !important;
+    font-family: 'Orbitron', sans-serif !important;
     font-weight: 600 !important;
-    font-size: 0.82rem !important;
-    letter-spacing: 0.08em !important;
-    text-transform: uppercase !important;
-    color: rgba(200,240,200,0.35) !important;
-    padding: 0.75rem 1.5rem !important;
+    font-size: 0.7rem !important;
+    letter-spacing: 0.12em !important;
+    color: rgba(0,255,80,0.3) !important;
+    padding: 1rem 2rem !important;
     border: none !important;
     background: transparent !important;
-    border-radius: 0 !important;
-    transition: all 0.2s !important;
+    transition: all 0.3s !important;
+    position: relative !important;
   }
   .stTabs [aria-selected="true"] {
-    color: #6eff6e !important;
-    background: rgba(110,255,110,0.06) !important;
-    border-bottom: 2px solid #6eff6e !important;
+    color: #00ff50 !important;
+    background: linear-gradient(180deg, rgba(0,255,80,0.08) 0%, transparent 100%) !important;
+    border-bottom: 2px solid #00ff50 !important;
+    text-shadow: 0 0 20px rgba(0,255,80,0.8) !important;
   }
-  .stTabs [data-baseweb="tab-panel"] { padding-top: 2rem !important; }
+  .stTabs [data-baseweb="tab-panel"] { padding-top: 2.5rem !important; }
 
   /* ─ Buttons */
   .stButton > button {
-    font-family: 'Space Grotesk', sans-serif !important;
+    font-family: 'Orbitron', sans-serif !important;
     font-weight: 700 !important;
-    font-size: 0.8rem !important;
-    letter-spacing: 0.1em !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.15em !important;
+    background: linear-gradient(135deg, rgba(0,255,80,0.1) 0%, rgba(0,180,60,0.05) 100%) !important;
+    color: #00ff50 !important;
+    border: 1px solid rgba(0,255,80,0.4) !important;
+    border-radius: 4px !important;
+    padding: 0.8rem 2rem !important;
+    transition: all 0.3s !important;
+    box-shadow: 0 0 20px rgba(0,255,80,0.1), inset 0 0 20px rgba(0,255,80,0.03) !important;
     text-transform: uppercase !important;
-    background: transparent !important;
-    color: #6eff6e !important;
-    border: 1px solid #3a7a3a !important;
-    border-radius: 2px !important;
-    padding: 0.65rem 1.5rem !important;
-    transition: all 0.2s !important;
   }
   .stButton > button:hover {
-    background: rgba(110,255,110,0.1) !important;
-    border-color: #6eff6e !important;
+    background: linear-gradient(135deg, rgba(0,255,80,0.2) 0%, rgba(0,180,60,0.1) 100%) !important;
+    border-color: #00ff50 !important;
+    box-shadow: 0 0 40px rgba(0,255,80,0.3), inset 0 0 20px rgba(0,255,80,0.05) !important;
     color: #ffffff !important;
-  }
-  div[data-testid="stButton"] > button[kind="primary"] {
-    background: #1a4a1a !important;
-    border-color: #6eff6e !important;
-    color: #6eff6e !important;
+    transform: translateY(-1px) !important;
   }
 
   /* ─ Inputs */
   .stNumberInput input, .stTextInput input {
-    background: #0a1a0e !important;
-    border: 1px solid #1a3a20 !important;
-    color: #c8f0c8 !important;
-    border-radius: 2px !important;
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.85rem !important;
+    background: rgba(0,255,80,0.03) !important;
+    border: 1px solid rgba(0,255,80,0.2) !important;
+    color: #00ff50 !important;
+    border-radius: 4px !important;
+    font-family: 'Share Tech Mono', monospace !important;
+    font-size: 0.9rem !important;
+    transition: all 0.3s !important;
   }
   .stNumberInput input:focus, .stTextInput input:focus {
-    border-color: #3a7a3a !important;
-    box-shadow: 0 0 0 2px rgba(110,255,110,0.08) !important;
+    border-color: #00ff50 !important;
+    box-shadow: 0 0 15px rgba(0,255,80,0.2) !important;
   }
   [data-baseweb="select"] > div {
-    background: #0a1a0e !important;
-    border-color: #1a3a20 !important;
-    color: #c8f0c8 !important;
-    border-radius: 2px !important;
+    background: rgba(0,255,80,0.03) !important;
+    border-color: rgba(0,255,80,0.2) !important;
+    color: #00ff50 !important;
+    border-radius: 4px !important;
   }
-  [data-baseweb="select"] svg { color: #3a7a3a !important; }
-  [data-baseweb="popover"] { background: #0d2010 !important; border: 1px solid #1a3a20 !important; }
-  [role="option"] { background: #0d2010 !important; color: #c8f0c8 !important; }
-  [role="option"]:hover { background: #1a3a20 !important; }
+  [data-baseweb="popover"] { background: #010f04 !important; border: 1px solid rgba(0,255,80,0.2) !important; }
+  [role="option"] { background: #010f04 !important; color: #e0ffe0 !important; }
+  [role="option"]:hover { background: rgba(0,255,80,0.1) !important; }
 
   /* ─ Slider */
-  [data-testid="stSlider"] > div > div > div > div { background: #3a7a3a !important; }
-  [data-testid="stSlider"] > div > div > div { background: #1a3a20 !important; }
-
-  /* ─ Data editor / dataframe */
-  .stDataFrame, .stDataEditor { border: 1px solid #1a3a20 !important; border-radius: 2px !important; }
-  [data-testid="stDataFrame"] th {
-    background: #0d2010 !important;
-    color: rgba(200,240,200,0.5) !important;
-    font-size: 0.65rem !important;
-    letter-spacing: 0.1em !important;
-    text-transform: uppercase !important;
-  }
+  [data-testid="stSlider"] > div > div > div > div { background: #00ff50 !important; box-shadow: 0 0 10px rgba(0,255,80,0.5) !important; }
+  [data-testid="stSlider"] > div > div > div { background: rgba(0,255,80,0.15) !important; }
 
   /* ─ Metrics */
   [data-testid="stMetricValue"] {
-    font-family: 'Space Grotesk', sans-serif !important;
-    font-size: 1.6rem !important;
+    font-family: 'Orbitron', sans-serif !important;
+    font-size: 1.8rem !important;
     font-weight: 700 !important;
-    color: #6eff6e !important;
+    color: #00ff50 !important;
+    text-shadow: 0 0 20px rgba(0,255,80,0.5) !important;
   }
   [data-testid="stMetricLabel"] {
-    font-size: 0.65rem !important;
+    font-family: 'Orbitron', sans-serif !important;
+    font-size: 0.6rem !important;
+    letter-spacing: 0.15em !important;
+    text-transform: uppercase !important;
+    color: rgba(0,255,80,0.5) !important;
+  }
+
+  /* ─ Dataframe */
+  [data-testid="stDataFrame"] th {
+    background: rgba(0,255,80,0.08) !important;
+    color: rgba(0,255,80,0.6) !important;
+    font-family: 'Orbitron', sans-serif !important;
+    font-size: 0.6rem !important;
     letter-spacing: 0.1em !important;
     text-transform: uppercase !important;
-    color: rgba(200,240,200,0.4) !important;
   }
-  [data-testid="stMetricDelta"] { font-size: 0.75rem !important; }
-
-  /* ─ Spinner */
-  .stSpinner > div { border-color: #3a7a3a #1a3a20 #1a3a20 !important; }
-
-  /* ─ Alert / info */
-  .stAlert { border-radius: 2px !important; border: 1px solid #1a3a20 !important; }
-
-  /* ─ Divider */
-  hr { border-color: #1a3a20 !important; }
 
   /* ─ Headings */
-  h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif !important; }
+  h1, h2, h3, h4 { font-family: 'Orbitron', sans-serif !important; color: #00ff50 !important; }
 
-  /* ─ Custom components (injected via markdown) */
+  /* ─ Custom components */
   .eco-section-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 0.2em;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
     text-transform: uppercase;
-    color: #3a7a3a;
-    margin-bottom: 4px;
+    color: rgba(0,255,80,0.4);
+    margin-bottom: 6px;
   }
   .eco-section-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 1.25rem;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.4rem;
     font-weight: 700;
-    color: #c8f0c8;
+    color: #00ff50;
     margin-bottom: 1.5rem;
     padding-bottom: 0.75rem;
-    border-bottom: 1px solid #1a3a20;
+    border-bottom: 1px solid rgba(0,255,80,0.2);
+    text-shadow: 0 0 30px rgba(0,255,80,0.4);
   }
   .eco-card {
-    background: #0a1a0e;
-    border: 1px solid #1a3a20;
-    border-radius: 2px;
-    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, rgba(0,255,80,0.05) 0%, rgba(0,0,0,0.3) 100%);
+    border: 1px solid rgba(0,255,80,0.2);
+    border-radius: 6px;
+    padding: 1.5rem;
     position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 30px rgba(0,255,80,0.05);
   }
-  .eco-card-accent {
+  .eco-card::before {
+    content: '';
     position: absolute;
     top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, #1a3a20, #3a7a3a, transparent);
+    background: linear-gradient(90deg, transparent, #00ff50, transparent);
+    animation: scanline 3s ease-in-out infinite;
   }
-  .eco-kv-label { font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(200,240,200,0.35); }
-  .eco-kv-value { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.8rem; color: #6eff6e; line-height: 1; margin: 4px 0; }
-  .eco-kv-sub   { font-size: 0.68rem; color: rgba(200,240,200,0.4); }
+  @keyframes scanline {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
 
   .eco-result-main {
-    background: #0a1a0e;
-    border: 1px solid #3a7a3a;
-    border-radius: 2px;
-    padding: 2.5rem;
+    background: linear-gradient(135deg, rgba(0,255,80,0.08) 0%, rgba(0,0,0,0.5) 100%);
+    border: 1px solid rgba(0,255,80,0.3);
+    border-radius: 6px;
+    padding: 3rem 2rem;
     text-align: center;
     position: relative;
     overflow: hidden;
+    box-shadow: 0 0 60px rgba(0,255,80,0.1), inset 0 0 60px rgba(0,255,80,0.02);
   }
   .eco-result-main::before {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, transparent, #6eff6e, transparent);
+    background: linear-gradient(90deg, transparent, #00ff50, transparent);
   }
-  .eco-result-label { font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: #3a7a3a; margin-bottom: 0.5rem; }
-  .eco-result-num   { font-family: 'Space Grotesk', sans-serif; font-size: 3.5rem; font-weight: 700; color: #6eff6e; line-height: 1; }
-  .eco-result-unit  { font-size: 0.8rem; color: rgba(200,240,200,0.45); margin-top: 0.4rem; }
-  .eco-result-range { font-size: 0.68rem; color: rgba(200,240,200,0.3); margin-top: 1rem; border-top: 1px solid #1a3a20; padding-top: 0.75rem; }
+  .eco-result-main::after {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%; width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(0,255,80,0.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .eco-result-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(0,255,80,0.5);
+    margin-bottom: 0.75rem;
+  }
+  .eco-result-num {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 4rem;
+    font-weight: 900;
+    color: #00ff50;
+    line-height: 1;
+    text-shadow: 0 0 40px rgba(0,255,80,0.6), 0 0 80px rgba(0,255,80,0.3);
+  }
+  .eco-result-unit { font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; color: rgba(0,255,80,0.4); margin-top: 0.5rem; letter-spacing: 0.1em; }
+  .eco-result-range { font-family: 'Share Tech Mono', monospace; font-size: 0.68rem; color: rgba(0,255,80,0.3); margin-top: 1rem; border-top: 1px solid rgba(0,255,80,0.1); padding-top: 0.75rem; }
 
-  .eco-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 1rem; }
+  .eco-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 1.25rem; }
   .eco-stat-cell {
-    background: #060e08;
-    border: 1px solid #1a3a20;
-    padding: 0.8rem 1rem;
-    border-radius: 2px;
+    background: rgba(0,255,80,0.04);
+    border: 1px solid rgba(0,255,80,0.15);
+    padding: 1rem;
+    border-radius: 4px;
+    transition: all 0.3s;
   }
+  .eco-stat-cell:hover { border-color: rgba(0,255,80,0.4); box-shadow: 0 0 20px rgba(0,255,80,0.1); }
+  .eco-kv-label { font-family: 'Share Tech Mono', monospace; font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(0,255,80,0.35); }
+  .eco-kv-value { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 1.5rem; color: #00ff50; line-height: 1; margin: 6px 0; text-shadow: 0 0 15px rgba(0,255,80,0.4); }
+  .eco-kv-sub { font-family: 'Rajdhani', sans-serif; font-size: 0.72rem; color: rgba(0,255,80,0.3); }
 
   .eco-route-stop {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    background: #0a1a0e;
-    border: 1px solid #1a3a20;
-    border-left: 3px solid #1a3a20;
-    padding: 0.6rem 1rem;
-    margin: 4px 0;
-    border-radius: 0 2px 2px 0;
-    transition: border-left-color 0.2s;
+    background: rgba(0,255,80,0.03);
+    border: 1px solid rgba(0,255,80,0.12);
+    border-left: 3px solid rgba(0,255,80,0.2);
+    padding: 0.75rem 1rem;
+    margin: 5px 0;
+    border-radius: 0 4px 4px 0;
+    transition: all 0.3s;
   }
-  .eco-route-stop.depot { border-left-color: #6eff6e; }
-  .eco-route-stop.high-fill { border-left-color: #e05a2b; }
-  .eco-route-stop.med-fill  { border-left-color: #f5c842; }
-  .eco-stop-num { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1rem; color: #6eff6e; min-width: 1.5rem; }
-  .eco-stop-name { flex: 1; font-size: 0.8rem; color: #c8f0c8; }
-  .eco-stop-coord { font-size: 0.65rem; color: rgba(200,240,200,0.3); }
-  .eco-stop-fill { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.8rem; }
+  .eco-route-stop:hover { background: rgba(0,255,80,0.06); border-color: rgba(0,255,80,0.3); }
+  .eco-route-stop.depot { border-left-color: #00ff50; box-shadow: -4px 0 15px rgba(0,255,80,0.2); }
+  .eco-route-stop.high-fill { border-left-color: #ff4444; }
+  .eco-route-stop.med-fill { border-left-color: #ffaa00; }
+  .eco-stop-num { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 1rem; color: #00ff50; min-width: 1.5rem; text-shadow: 0 0 10px rgba(0,255,80,0.5); }
+  .eco-stop-name { flex: 1; font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 500; color: #e0ffe0; }
+  .eco-stop-coord { font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; color: rgba(0,255,80,0.25); }
+  .eco-stop-fill { font-family: 'Orbitron', sans-serif; font-weight: 600; font-size: 0.8rem; }
 
   .eco-pill {
     display: inline-block;
-    padding: 2px 10px;
+    padding: 3px 12px;
     border-radius: 100px;
-    font-size: 0.6rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.58rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
-  .eco-pill-green { background: rgba(110,255,110,0.1); border: 1px solid rgba(110,255,110,0.3); color: #6eff6e; }
-  .eco-pill-amber { background: rgba(245,200,66,0.1); border: 1px solid rgba(245,200,66,0.3); color: #f5c842; }
-  .eco-pill-red   { background: rgba(224,90,43,0.1); border: 1px solid rgba(224,90,43,0.3); color: #e05a2b; }
+  .eco-pill-green { background: rgba(0,255,80,0.1); border: 1px solid rgba(0,255,80,0.4); color: #00ff50; box-shadow: 0 0 10px rgba(0,255,80,0.15); }
+  .eco-pill-amber { background: rgba(255,170,0,0.1); border: 1px solid rgba(255,170,0,0.4); color: #ffaa00; }
+  .eco-pill-red   { background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.4); color: #ff4444; }
   .eco-pill-grey  { background: rgba(200,240,200,0.05); border: 1px solid rgba(200,240,200,0.15); color: rgba(200,240,200,0.4); }
 
-  .eco-divider-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: #1e4a22;
-    margin: 1.5rem 0 0.75rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 1px solid #1a3a20;
-  }
-
   .eco-empty-state {
-    background: #0a1a0e;
-    border: 1px dashed #1a3a20;
-    border-radius: 2px;
-    padding: 3.5rem 2rem;
+    background: rgba(0,255,80,0.02);
+    border: 1px dashed rgba(0,255,80,0.15);
+    border-radius: 6px;
+    padding: 4rem 2rem;
     text-align: center;
     margin-top: 1rem;
   }
-  .eco-empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4; }
-  .eco-empty-msg { font-family: 'Space Grotesk', sans-serif; font-size: 0.85rem; font-weight: 600; color: rgba(200,240,200,0.3); }
-  .eco-empty-sub { font-size: 0.68rem; color: rgba(200,240,200,0.2); margin-top: 0.4rem; }
+  .eco-empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+  .eco-empty-msg { font-family: 'Orbitron', sans-serif; font-size: 0.85rem; font-weight: 600; color: rgba(0,255,80,0.3); }
+  .eco-empty-sub { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: rgba(0,255,80,0.2); margin-top: 0.5rem; letter-spacing: 0.1em; }
 
   .eco-svg-wrap {
-    background: #060e08;
-    border: 1px solid #1a3a20;
-    border-radius: 2px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(0,255,80,0.15);
+    border-radius: 6px;
     padding: 1rem;
     margin-top: 1.25rem;
+    box-shadow: inset 0 0 30px rgba(0,255,80,0.03);
   }
 
   .form-group-title {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(0,255,80,0.4);
+    margin: 1.5rem 0 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(0,255,80,0.1);
+  }
+
+  .eco-divider-label {
+    font-family: 'Share Tech Mono', monospace;
     font-size: 0.62rem;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: #3a7a3a;
-    margin: 1.25rem 0 0.6rem;
+    color: rgba(0,255,80,0.25);
+    margin: 1.5rem 0 0.75rem;
     padding-bottom: 0.4rem;
-    border-bottom: 1px solid #1a3a20;
+    border-bottom: 1px solid rgba(0,255,80,0.1);
   }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #020b06; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,255,80,0.3); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,255,80,0.6); }
+
+  /* Alert */
+  .stAlert { border-radius: 4px !important; border: 1px solid rgba(0,255,80,0.2) !important; background: rgba(0,255,80,0.04) !important; }
+  hr { border-color: rgba(0,255,80,0.1) !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -500,25 +548,35 @@ with st.sidebar:
 
 
 # ─── PAGE HEADER ───────────────────────────────────────────────────────────────
+# ─── PAGE HEADER ───────────────────────────────────────────────────────────────
 st.markdown("""
-<div style="background:#0a1a0e;border:1px solid #1a3a20;border-radius:2px;
-            padding:2rem 2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;">
+<div style="background:linear-gradient(135deg,rgba(0,255,80,0.08) 0%,rgba(0,0,0,0.5) 100%);
+            border:1px solid rgba(0,255,80,0.25);border-radius:8px;
+            padding:2.5rem 3rem;margin-bottom:2.5rem;position:relative;overflow:hidden;">
   <div style="position:absolute;top:0;left:0;right:0;height:3px;
-              background:linear-gradient(90deg,#0a1a0e,#6eff6e 40%,#3a7a3a 70%,#0a1a0e);"></div>
-  <div style="position:absolute;bottom:-60px;right:-30px;width:200px;height:200px;
-              border-radius:50%;border:1px solid rgba(110,255,110,0.05);pointer-events:none;"></div>
-  <div style="position:absolute;bottom:-40px;right:-10px;width:140px;height:140px;
-              border-radius:50%;border:1px solid rgba(110,255,110,0.07);pointer-events:none;"></div>
-  <div style="font-family:'Space Grotesk',sans-serif;font-size:1.8rem;font-weight:700;
-              color:#6eff6e;letter-spacing:-0.03em;line-height:1;margin-bottom:0.4rem;">
-    Smart Waste AI
+              background:linear-gradient(90deg,transparent,#00ff50 40%,rgba(0,255,80,0.3) 70%,transparent);"></div>
+  <div style="position:absolute;top:-80px;right:-80px;width:300px;height:300px;
+              border-radius:50%;border:1px solid rgba(0,255,80,0.05);pointer-events:none;"></div>
+  <div style="position:absolute;top:-50px;right:-50px;width:200px;height:200px;
+              border-radius:50%;border:1px solid rgba(0,255,80,0.08);pointer-events:none;"></div>
+  <div style="font-family:'Orbitron',sans-serif;font-size:2.2rem;font-weight:900;
+              color:#00ff50;letter-spacing:-0.02em;line-height:1;margin-bottom:0.5rem;
+              text-shadow:0 0 40px rgba(0,255,80,0.5);">
+    ♻ ECOMIND
   </div>
-  <div style="font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;
-              color:rgba(200,240,200,0.3);">
-    Water Demand &nbsp;·&nbsp; Waste Generation &nbsp;·&nbsp; Route Optimization
+  <div style="font-family:'Share Tech Mono',monospace;font-size:0.7rem;letter-spacing:0.25em;
+              text-transform:uppercase;color:rgba(0,255,80,0.4);">
+    Smart Waste AI &nbsp;·&nbsp; Water Demand &nbsp;·&nbsp; Waste Generation &nbsp;·&nbsp; Route Optimization
+  </div>
+  <div style="position:absolute;right:3rem;top:50%;transform:translateY(-50%);
+              font-family:'Orbitron',sans-serif;font-size:4rem;font-weight:900;
+              color:rgba(0,255,80,0.04);letter-spacing:-0.05em;pointer-events:none;">
+    AI
   </div>
 </div>
 """, unsafe_allow_html=True)
+
+# ─── TABS ──────────────────────────────────────────────────────────────────────
 
 
 # ─── TABS ──────────────────────────────────────────────────────────────────────
