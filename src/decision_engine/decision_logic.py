@@ -1,0 +1,103 @@
+import os
+import sys
+import numpy as np
+import joblib
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../'))
+
+ROOT          = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
+MODELS_DIR    = os.path.join(ROOT, 'backend', 'trained_models')
+PROCESSED_DIR = os.path.join(ROOT, 'data', 'processed')
+
+
+class SmartWasteDecisionEngine:
+
+    def __init__(self):
+        self._water_model = None
+        self._waste_model = None
+        self._route_model = None
+        self._scaler_w    = None
+        self._scaler_g    = None
+        self._encoders    = None
+        self._ready       = False
+
+    def load_models(self):
+        errors = []
+
+        def _load(path):
+            if not os.path.exists(path):
+                errors.append(f'Missing: {path}')
+                return None
+            return joblib.load(path)
+
+        self._water_model = _load(os.path.join(MODELS_DIR,    'water_model.pkl'))
+        self._waste_model = _load(os.path.join(MODELS_DIR,    'waste_model.pkl'))
+        self._route_model = _load(os.path.join(MODELS_DIR,    'travel_time_model.pkl'))
+        self._scaler_w    = _load(os.path.join(PROCESSED_DIR, 'scaler_water.pkl'))
+        self._scaler_g    = _load(os.path.join(PROCESSED_DIR, 'scaler_waste.pkl'))
+        self._encoders    = _load(os.path.join(PROCESSED_DIR, 'label_encoders.pkl'))
+
+        if errors:
+            for e in errors:
+                print(f'[DecisionEngine] WARNING: {e}')
+            self._ready = False
+            print('[DecisionEngine] Some files missing - run training scripts first.')
+        else:
+            self._ready = True
+            print('[DecisionEngine] All models loaded successfully.')
+
+    @property
+    def ready(self):
+        return self._ready
+
+    def _encode_cat(self, val, field):
+        if self._encoders is None:
+            return 0
+        le = self._encoders.get(field)
+        if le is None:
+            return 0
+        try:
+            return int(le.transform([str(val)])[0])
+        except ValueError:
+            return 0
+
+    def _build_row(self, payload, feature_list):
+        CAT = {
+            'Urban_Rural_Type', 'Season', 'Day_Type', 'Festival_Event',
+            'Disaster_Event', 'Traffic_Congestion_Level',
+            'Road_Type', 'Road_Condition'
+        }
+        row = []
+        for feat in feature_list:
+            val = payload.get(feat, 0)
+            if feat in CAT:
+                val = self._encode_cat(val, feat)
+            row.append(float(val))
+        return row
+
+    def predict_water(self, payload):
+        from src.data_processing.preprocess import WATER_FEATURES
+        row  = self._build_row(payload, WATER_FEATURES)
+        X    = np.array(row).reshape(1, -1)
+        X    = self._scaler_w.transform(X)
+        pred = float(self._water_model.predict(X)[0])
+        return {
+            'water_demand_liters': round(pred, 2),
+            'lower_bound':         round(pred * 0.90, 2),
+            'upper_bound':         round(pred * 1.10, 2),
+        }
+
+    def predict_waste(self, payload):
+        from src.data_processing.preprocess import WASTE_FEATURES
+        row  = self._build_row(payload, WASTE_FEATURES)
+        X    = np.array(row).reshape(1, -1)
+        X    = self._scaler_g.transform(X)
+        pred = float(self._waste_model.predict(X)[0])
+        return {
+            'waste_generated_tons': round(pred, 3),
+            'lower_bound':          round(pred * 0.88, 3),
+            'upper_bound':          round(pred * 1.12, 3),
+        }
+
+
+engine = SmartWasteDecisionEngine()
