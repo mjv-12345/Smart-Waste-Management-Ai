@@ -312,7 +312,7 @@ def api_post(endpoint: str, payload: dict):
 
 def api_get(endpoint: str):
     try:
-        r = requests.get(f"{API}{endpoint}", timeout=5)
+        r = requests.get(f"{API}{endpoint}", timeout=60)  # increased timeout
         return r.json()
     except:
         return {"status": "offline"}
@@ -437,6 +437,7 @@ def render_route_svg(stops_data: list, ordered_stops: list, W=580, H=300):
 
 # ─── SIDEBAR ───────────────────────────────────────────────────────────────────
 with st.sidebar:
+    st.info("⏳ Backend may take 50 seconds to wake up. If offline, wait and refresh!")
     st.markdown("""
     <div style="padding: 0.75rem 0 1.25rem;">
       <div style="font-family:'Space Grotesk',sans-serif;font-size:1.5rem;font-weight:700;
