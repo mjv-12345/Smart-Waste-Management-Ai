@@ -19,7 +19,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-https://smart-waste-backend-vtop.onrender.com
+API = "https://smart-waste-backend-vtop.onrender.com"
 
 # ─── GLOBAL CSS ────────────────────────────────────────────────────────────────
 st.markdown("""
