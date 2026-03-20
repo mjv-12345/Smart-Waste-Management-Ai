@@ -1,3 +1,15 @@
+# ================================================================
+#  FILE 6 of 7  —  backend/main.py
+#  CORRECTIONS APPLIED:
+#  FIX 1: Removed duplicate engine.load_models() from startup
+#  FIX 2: Festival/Disaster defaults fixed to match encoder
+#  FIX 3: dayofyear dead field removed from both payloads
+#  FIX 4: 5 dead fields removed from WastePayload
+#  FIX 5: Added POST /predict/route endpoint
+#  FIX 6: road_type rename moved to StopItem validator
+#  FIX 7: try/except error handling on predict endpoints
+# ================================================================
+
 import os
 import sys
 
@@ -5,7 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../"))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import List, Optional
 import json
 
@@ -22,12 +34,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# FIX 1: No longer calls engine.load_models() here
+# decision_logic.py already calls it at module import time
+# This event now just validates that loading succeeded
 @app.on_event("startup")
 async def startup():
-    engine.load_models()
+    if not engine.ready:
+        print("[main.py] WARNING: engine not ready — run training scripts first")
+    else:
+        print("[main.py] Engine ready. All models loaded.")
 
+
+# FIX 2: Festival/Disaster defaults match LabelEncoder values
+# FIX 3: dayofyear removed — not in WATER_FEATURES
 class WaterPayload(BaseModel):
-    Area_ID: int = 1
     Population: int = 50000
     Population_Density: float = 5000
     Household_Size: int = 4
@@ -38,28 +58,27 @@ class WaterPayload(BaseModel):
     Humidity_percent: float = 60.0
     Season: str = "Summer"
     Day_Type: str = "Weekday"
-    Festival_Event: str = "None"
-    Disaster_Event: str = "None"
+    Festival_Event: str = "No_Festival"    # FIX 2
+    Disaster_Event: str = "No_Disaster"    # FIX 2
     Past_Water_Usage: float = 300.0
     Recycling_Rate_percent: float = 30.0
     month: int = 4
     dayofweek: int = 2
-    dayofyear: int = 102
 
+
+# FIX 2: Festival/Disaster defaults fixed
+# FIX 3: dayofyear removed — not in WASTE_FEATURES
+# FIX 4: Removed Area_ID, Household_Size, Per_Capita_Income,
+#         Urban_Rural_Type, Humidity_percent — not in WASTE_FEATURES
 class WastePayload(BaseModel):
-    Area_ID: int = 1
     Population: int = 50000
     Population_Density: float = 5000
-    Household_Size: int = 4
-    Per_Capita_Income: int = 300000
-    Urban_Rural_Type: str = "Urban"
     Temperature_C: float = 30.0
     Rainfall_mm: float = 100.0
-    Humidity_percent: float = 60.0
     Season: str = "Summer"
     Day_Type: str = "Weekday"
-    Festival_Event: str = "None"
-    Disaster_Event: str = "None"
+    Festival_Event: str = "No_Festival"    # FIX 2
+    Disaster_Event: str = "No_Disaster"    # FIX 2
     Past_Waste_t1_tons: float = 150.0
     Past_Waste_t7_tons: float = 1050.0
     Past_Waste_t30_tons: float = 4500.0
@@ -71,8 +90,9 @@ class WastePayload(BaseModel):
     Recycling_Rate_percent: float = 30.0
     month: int = 4
     dayofweek: int = 2
-    dayofyear: int = 102
 
+
+# FIX 6: road_type alias handled in validator — not inline in endpoint
 class StopItem(BaseModel):
     id: str
     name: str
@@ -88,15 +108,23 @@ class StopItem(BaseModel):
     population_density: float = 5000
     collection_freq: int = 3
 
+    def dict(self, **kwargs):
+        d = super().dict(**kwargs)
+        d["road_type"] = d.pop("road_type_str", "Main_Road")  # FIX 6
+        return d
+
+
 class VehicleItem(BaseModel):
     capacity_kg: float = 5000
     current_load_kg: float = 0
     fuel_km_per_l: float = 5.0
 
+
 class RoutePayload(BaseModel):
     stops: List[StopItem]
     vehicle: VehicleItem = VehicleItem()
     depot_index: int = 0
+
 
 @app.get("/health")
 def health():
@@ -113,28 +141,47 @@ def health():
         "metrics": metrics
     }
 
+
+# FIX 7: try/except for structured error response
 @app.post("/predict/water")
 def predict_water(payload: WaterPayload):
     if not engine.ready:
-        raise HTTPException(503, "Models not trained.")
-    return {"success": True, "prediction": engine.predict_water(payload.dict())}
+        raise HTTPException(503, "Models not trained. Run training scripts first.")
+    try:
+        return {"success": True, "prediction": engine.predict_water(payload.dict())}
+    except Exception as e:
+        raise HTTPException(422, f"Prediction failed: {str(e)}")
 
+
+# FIX 7: try/except for structured error response
 @app.post("/predict/waste")
 def predict_waste(payload: WastePayload):
     if not engine.ready:
-        raise HTTPException(503, "Models not trained.")
-    return {"success": True, "prediction": engine.predict_waste(payload.dict())}
+        raise HTTPException(503, "Models not trained. Run training scripts first.")
+    try:
+        return {"success": True, "prediction": engine.predict_waste(payload.dict())}
+    except Exception as e:
+        raise HTTPException(422, f"Prediction failed: {str(e)}")
+
+
+# FIX 5: New endpoint — was completely missing
+@app.post("/predict/route")
+def predict_route(payload: WastePayload):
+    if not engine.ready:
+        raise HTTPException(503, "Models not trained. Run training scripts first.")
+    try:
+        return {"success": True, "prediction": engine.predict_route(payload.dict())}
+    except Exception as e:
+        raise HTTPException(422, f"Route prediction failed: {str(e)}")
+
 
 @app.post("/optimize")
 def optimize(payload: RoutePayload):
-    stops = []
-    for s in payload.stops:
-        d = s.dict()
-        d["road_type"] = d.pop("road_type_str", "Main_Road")  # fix key name
-        stops.append(d)
+    stops = [s.dict() for s in payload.stops]   # FIX 6: dict() handles rename
     vehicle = payload.vehicle.dict()
-    result = optimize_route(stops, vehicle)  # fix: only 2 args
+    result = optimize_route(stops, vehicle)
     return {"success": True, "optimization": result}
+
 
 @app.get("/")
 def root():
