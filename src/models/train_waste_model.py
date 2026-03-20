@@ -1,44 +1,10 @@
 # ================================================================
 #  FILE 3 of 7  —  src/models/train_waste_model.py
 #
-#  ROLE IN THE CHAIN:
-#  ┌─────────────────────────────────────────────────────┐
-#  │  preprocess.py                                      │
-#  │       │  run_preprocessing() → data["waste"]        │
-#  │       ▼                                             │
-#  │  train_waste_model.py  ◄── YOU ARE HERE             │
-#  │       │                                             │
-#  │       ▼                                             │
-#  │  backend/trained_models/waste_model.pkl             │
-#  │       │                                             │
-#  │       ▼  (loaded later by)                          │
-#  │  decision_logic.py → backend/main.py                │
-#  └─────────────────────────────────────────────────────┘
-#
-#  WHAT THIS FILE DOES:
-#  1. Calls preprocess.py → gets clean waste training data
-#  2. Trains 3 different ML algorithms
-#  3. Tests each on 2000 unseen rows
-#  4. Picks the best model automatically
-#  5. Saves best model → backend/trained_models/waste_model.pkl
-#  6. Saves metrics  → backend/trained_models/waste_metrics.json
-#
-#  INPUT FEATURES (19) — DIFFERENT FROM WATER MODEL:
-#  Population, Population_Density, Temperature_C,
-#  Rainfall_mm, Season, Day_Type, Festival_Event,
-#  Disaster_Event, Past_Waste_t1_tons, Past_Waste_t7_tons,
-#  Past_Waste_t30_tons, Organic_Waste_percent,
-#  Plastic_Waste_percent, Paper_Waste_percent,
-#  Other_Waste_percent, Collection_Frequency_per_week,
-#  Recycling_Rate_percent, month, dayofweek
-#
-#  TARGET:  Waste_Generated_tons  (tonnes/day)
-#  RANGE:   25 → 250 tonnes
-#
-#  WHY DIFFERENT FROM WATER MODEL?
-#  Water demand depends on WHO lives there (demographics)
-#  Waste generation depends on WHAT was generated before
-#  (history + composition) — completely different signal set
+#  CORRECTIONS APPLIED:
+#  1. Added n_jobs=-1 to XGBRegressor (parallel training)
+#  2. Added feature_importances_ export to metrics JSON
+#  3. Added explicit logging when XGBoost is skipped
 # ================================================================
 
 import os
@@ -47,14 +13,9 @@ import json
 import numpy as np
 import joblib
 
-# ----------------------------------------------------------------
-#  CONNECT TO FILE 1
-#  Add project root to path so imports work correctly
-# ----------------------------------------------------------------
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 sys.path.insert(0, BASE_DIR)
 
-# ← CHAIN LINK TO FILE 1
 from src.data_processing.preprocess import run_preprocessing
 
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
@@ -62,10 +23,19 @@ from sklearn.metrics  import mean_absolute_error, mean_squared_error, r2_score
 
 MODELS_DIR = os.path.join(BASE_DIR, "backend", "trained_models")
 
+WASTE_FEATURE_NAMES = [
+    "Population", "Population_Density", "Temperature_C",
+    "Rainfall_mm", "Season", "Day_Type", "Festival_Event",
+    "Disaster_Event", "Past_Waste_t1_tons", "Past_Waste_t7_tons",
+    "Past_Waste_t30_tons", "Organic_Waste_percent",
+    "Plastic_Waste_percent", "Paper_Waste_percent",
+    "Other_Waste_percent", "Collection_Frequency_per_week",
+    "Recycling_Rate_percent", "month", "dayofweek"
+]
+
 
 # ================================================================
 #  EVALUATION FUNCTION
-#  Same logic as water model but unit = tonnes
 # ================================================================
 def evaluate(name, model, X_test, y_test):
     preds = model.predict(X_test)
@@ -90,14 +60,9 @@ def train_waste_model():
     print("="*55)
 
     # ── STEP 1: GET DATA FROM FILE 1 ────────────────────────────
-    # Same call as water model but we pick data["waste"]
-    # This gives us 19 waste-specific features
     print("\n[1] Calling preprocess.py ...")
     data = run_preprocessing()
 
-    # ← KEY DIFFERENCE FROM FILE 2
-    # Water model used data["water"] with 16 features
-    # Waste model uses data["waste"] with 19 features
     X_train, X_test, y_train, y_test, scaler = data["waste"]
 
     print(f"\n[2] Waste training data ready:")
@@ -111,8 +76,6 @@ def train_waste_model():
     trained = {}
 
     # MODEL A — Random Forest
-    # 200 trees, each sees random subset of
-    # 19 waste features (history + composition + collection)
     print("\n  Training Random Forest ...")
     rf = RandomForestRegressor(
         n_estimators      = 200,
@@ -125,9 +88,6 @@ def train_waste_model():
     trained["RandomForest"] = rf
 
     # MODEL B — Gradient Boosting
-    # Sequentially corrects errors
-    # Works well with the rolling waste history columns
-    # (Past_Waste_t1, t7, t30 have strong sequential patterns)
     print("  Training Gradient Boosting ...")
     gb = GradientBoostingRegressor(
         n_estimators  = 200,
@@ -140,8 +100,8 @@ def train_waste_model():
     trained["GradientBoosting"] = gb
 
     # MODEL C — XGBoost
-    # Best at handling the waste composition percentages
-    # (Organic%, Plastic%, Paper%, Other% — all related)
+    # FIX 1: Added n_jobs=-1 for parallel training speed
+    # FIX 3: Explicit logging when XGBoost is skipped
     try:
         from xgboost import XGBRegressor
         print("  Training XGBoost ...")
@@ -152,12 +112,16 @@ def train_waste_model():
             subsample        = 0.8,
             colsample_bytree = 0.8,
             random_state     = 42,
+            n_jobs           = -1,   # FIX 1: parallel training
             verbosity        = 0
         )
         xgb.fit(X_train, y_train)
         trained["XGBoost"] = xgb
     except ImportError:
-        print("  XGBoost not found → run: pip install xgboost")
+        # FIX 3: explicit fallback logging instead of silent skip
+        print("  ⚠️  XGBoost not installed — skipping.")
+        print("      Best model will be selected from 2 remaining models.")
+        print("      To include XGBoost: pip install xgboost")
 
     # ── STEP 3: EVALUATE ALL MODELS ─────────────────────────────
     print("\n[4] Evaluating all models on TEST set (2000 unseen rows):")
@@ -176,8 +140,6 @@ def train_waste_model():
     print(f"    R²   = {best['r2']:.4f}")
 
     # ── STEP 5: SAVE BEST MODEL ──────────────────────────────────
-    # Saved to backend/trained_models/waste_model.pkl
-    # Chain: this file → decision_logic.py → main.py → frontend
     os.makedirs(MODELS_DIR, exist_ok=True)
     model_path = os.path.join(MODELS_DIR, "waste_model.pkl")
     joblib.dump(best["model_obj"], model_path)
@@ -186,17 +148,35 @@ def train_waste_model():
     print(f"       → loaded later by decision_logic.py")
 
     # ── STEP 6: SAVE METRICS ─────────────────────────────────────
+    # FIX 2: Extract and save feature importances
+    best_model = best["model_obj"]
+    if hasattr(best_model, "feature_importances_"):
+        importances = best_model.feature_importances_
+        feature_importance_dict = {
+            name: round(float(score), 6)
+            for name, score in zip(WASTE_FEATURE_NAMES, importances)
+        }
+        # Sort by importance descending for easy reading
+        feature_importance_dict = dict(
+            sorted(feature_importance_dict.items(),
+                   key=lambda x: x[1], reverse=True)
+        )
+    else:
+        feature_importance_dict = {}
+        print("    ⚠️  Model does not expose feature_importances_")
+
     metrics_out = {
-        "model_type"    : best["name"],
-        "mae"           : round(best["mae"],  4),
-        "rmse"          : round(best["rmse"], 4),
-        "r2"            : round(best["r2"],   4),
-        "target"        : "Waste_Generated_tons",
-        "unit"          : "tonnes/day",
-        "features_used" : 19,
-        "train_rows"    : int(X_train.shape[0]),
-        "test_rows"     : int(X_test.shape[0]),
-        "all_models"    : [
+        "model_type"          : best["name"],
+        "mae"                 : round(best["mae"],  4),
+        "rmse"                : round(best["rmse"], 4),
+        "r2"                  : round(best["r2"],   4),
+        "target"              : "Waste_Generated_tons",
+        "unit"                : "tonnes/day",
+        "features_used"       : 19,
+        "train_rows"          : int(X_train.shape[0]),
+        "test_rows"           : int(X_test.shape[0]),
+        "feature_importances" : feature_importance_dict,   # FIX 2
+        "all_models"          : [
             {
                 "name": r["name"],
                 "mae" : round(r["mae"], 4),
@@ -209,6 +189,7 @@ def train_waste_model():
     with open(metrics_path, "w") as f:
         json.dump(metrics_out, f, indent=2)
     print(f"    📊 waste_metrics.json saved")
+    print(f"       → includes feature importances (FIX 2)")
     print(f"       → displayed in frontend dashboard")
 
     print(f"\n{'='*55}")
