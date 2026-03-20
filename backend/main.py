@@ -186,3 +186,8 @@ def optimize(payload: RoutePayload):
 @app.get("/")
 def root():
     return {"service": "Smart Waste AI", "status": "running"}
+
+
+@app.get("/")
+def root():
+    return {"service": "Smart Waste AI", "status": "running"}
