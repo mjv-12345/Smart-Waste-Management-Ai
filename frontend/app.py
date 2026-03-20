@@ -91,103 +91,320 @@ def render_particle_header():
 
 
 # ── 3D: ROTATING GLOBE with waste pins ─────────────────────────
-def render_3d_globe(stops=None):
-    stops_js = "[]"
-    if stops:
-        pts = [{"lat": s["lat"], "lon": s["lon"], "name": s.get("name",""), "fill": s.get("fill_percent",0)} for s in stops]
-        import json
-        stops_js = json.dumps(pts)
+def render_3d_globe(stops=None, ordered_route=None):
+    import json
+
+    stops_js = json.dumps([{
+        "lat": s["lat"], "lon": s["lon"],
+        "name": s.get("name", ""),
+        "fill": s.get("fill_percent", s.get("fill", 0))
+    } for s in (stops or [])])
+
+    route_js = json.dumps([{
+        "lat": s["lat"], "lon": s["lon"],
+        "name": s.get("name", ""),
+        "fill": s.get("fill_percent", s.get("fill", 0))
+    } for s in (ordered_route or [])])
+
+    has_route = "true" if ordered_route else "false"
 
     components.html(f"""
-    <div id="globe-container" style="width:100%;height:420px;background:#010f04;border:1px solid rgba(0,255,80,.2);border-radius:8px;overflow:hidden;position:relative">
+    <div id="globe-container" style="width:100%;height:450px;background:#010f04;
+      border:1px solid rgba(0,255,80,.25);border-radius:10px;
+      overflow:hidden;position:relative;">
+
       <canvas id="gc" style="width:100%;height:100%"></canvas>
-      <div style="position:absolute;top:12px;left:12px;font-family:monospace;font-size:.65rem;color:rgba(0,255,80,.4);letter-spacing:.15em">THREE.JS · WEBGL · LIVE PINS</div>
+
+      <div style="position:absolute;top:12px;left:14px;font-family:monospace;
+        font-size:.6rem;color:rgba(0,255,80,.5);letter-spacing:.15em;line-height:2;">
+        THREE.JS · WEBGL · LIVE PINS<br>
+        <span style="color:rgba(0,255,80,.3)">DRAG TO ROTATE · SCROLL TO ZOOM</span>
+      </div>
+
+      <div style="position:absolute;top:12px;right:14px;font-family:monospace;
+        font-size:.58rem;color:rgba(0,255,80,.4);text-align:right;line-height:2;">
+        <span style="color:#00ff50">●</span> Normal &nbsp;
+        <span style="color:#ffaa00">●</span> Medium &nbsp;
+        <span style="color:#ff4444">●</span> Urgent
+      </div>
     </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-    const stops={stops_js};
-    const container=document.getElementById('globe-container');
-    const W=container.clientWidth, H=container.clientHeight;
-    const renderer=new THREE.WebGLRenderer({{canvas:document.getElementById('gc'),antialias:true,alpha:true}});
-    renderer.setSize(W,H); renderer.setPixelRatio(window.devicePixelRatio);
+    const STOPS     = {stops_js};
+    const ROUTE     = {route_js};
+    const HAS_ROUTE = {has_route};
 
-    const scene=new THREE.Scene();
-    const camera=new THREE.PerspectiveCamera(45,W/H,0.1,1000);
-    camera.position.set(0,0,2.8);
+    const container = document.getElementById('globe-container');
+    const W = container.clientWidth  || 700;
+    const H = container.clientHeight || 450;
 
-    // Globe
-    const geo=new THREE.SphereGeometry(1,64,64);
-    const mat=new THREE.MeshPhongMaterial({{
-      color:0x021a08, emissive:0x001504,
-      wireframe:false, transparent:true, opacity:0.95
+    const renderer = new THREE.WebGLRenderer({{
+      canvas: document.getElementById('gc'),
+      antialias: true, alpha: true
     }});
-    const globe=new THREE.Mesh(geo,mat); scene.add(globe);
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setClearColor(0x010f04, 1);
 
-    // Wireframe overlay
-    const wfMat=new THREE.MeshBasicMaterial({{color:0x00ff50,wireframe:true,transparent:true,opacity:0.06}});
-    scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.001,32,32),wfMat));
+    const scene  = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, W/H, 0.1, 1000);
+    camera.position.set(0, 0, 2.2);  // ← zoomed in closer
 
-    // Glow atmosphere
-    const atmGeo=new THREE.SphereGeometry(1.08,32,32);
-    const atmMat=new THREE.MeshBasicMaterial({{color:0x00ff50,transparent:true,opacity:0.04,side:THREE.BackSide}});
-    scene.add(new THREE.Mesh(atmGeo,atmMat));
+    // ── GROUP everything so it all rotates together ──────────
+    const earthGroup = new THREE.Group();
+    scene.add(earthGroup);
 
-    // Lights
-    scene.add(new THREE.AmbientLight(0x002208,2));
-    const dLight=new THREE.DirectionalLight(0x00ff50,1.5);
-    dLight.position.set(5,3,5); scene.add(dLight);
+    // Globe sphere
+    const globe = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 64, 64),
+      new THREE.MeshPhongMaterial({{
+        color:     0x021a08,
+        emissive:  0x002208,
+        specular:  0x00ff50,
+        shininess: 20,
+        transparent: true,
+        opacity: 0.95
+      }})
+    );
+    earthGroup.add(globe);
 
-    // Convert lat/lon → 3D point on sphere
-    function latLonTo3D(lat,lon,r=1.02){{
-      const phi=(90-lat)*Math.PI/180, theta=(lon+180)*Math.PI/180;
+    // Wireframe overlay — inside same group so it rotates too
+    earthGroup.add(new THREE.Mesh(
+      new THREE.SphereGeometry(1.002, 32, 32),
+      new THREE.MeshBasicMaterial({{
+        color: 0x00ff50, wireframe: true,
+        transparent: true, opacity: 0.06
+      }})
+    ));
+
+    // Atmosphere glow
+    earthGroup.add(new THREE.Mesh(
+      new THREE.SphereGeometry(1.15, 32, 32),
+      new THREE.MeshBasicMaterial({{
+        color: 0x00ff50, transparent: true,
+        opacity: 0.04, side: THREE.BackSide
+      }})
+    ));
+
+    // ── Lights ───────────────────────────────────────────────
+    scene.add(new THREE.AmbientLight(0x003310, 4));
+    const dLight = new THREE.DirectionalLight(0x00ff50, 1.5);
+    dLight.position.set(5, 3, 5);
+    scene.add(dLight);
+
+    // ── Lat/Lon → 3D ─────────────────────────────────────────
+    function ll3d(lat, lon, r=1.0) {{
+      const phi   = (90 - lat) * Math.PI / 180;
+      const theta = (lon + 180) * Math.PI / 180;
       return new THREE.Vector3(
-        -r*Math.sin(phi)*Math.cos(theta),
-        r*Math.cos(phi),
-        r*Math.sin(phi)*Math.sin(theta)
+        -r * Math.sin(phi) * Math.cos(theta),
+         r * Math.cos(phi),
+         r * Math.sin(phi) * Math.sin(theta)
       );
     }}
 
-    // Add stop pins
-    stops.forEach(s=>{{
-      const pos=latLonTo3D(s.lat,s.lon);
-      const col=s.fill>=85?0xff4444:s.fill>=70?0xffaa00:0x00ff50;
-      const pinGeo=new THREE.SphereGeometry(0.025,8,8);
-      const pinMat=new THREE.MeshBasicMaterial({{color:col}});
-      const pin=new THREE.Mesh(pinGeo,pinMat);
-      pin.position.copy(pos); scene.add(pin);
-      // Spike
-      const spkGeo=new THREE.CylinderGeometry(0.004,0.004,0.12,6);
-      const spk=new THREE.Mesh(spkGeo,new THREE.MeshBasicMaterial({{color:col,transparent:true,opacity:.7}}));
-      spk.position.copy(pos.clone().multiplyScalar(1.07));
-      spk.lookAt(new THREE.Vector3(0,0,0)); scene.add(spk);
-    }});
-
-    // Default Hyderabad pin if no stops
-    if(!stops.length){{
-      const pos=latLonTo3D(17.385,78.487);
-      const pin=new THREE.Mesh(new THREE.SphereGeometry(0.035,8,8),new THREE.MeshBasicMaterial({{color:0x00ff50}}));
-      pin.position.copy(pos); scene.add(pin);
+    function pinColor(fill) {{
+      if (fill >= 85) return 0xff4444;
+      if (fill >= 70) return 0xffaa00;
+      return 0x00ff50;
     }}
 
-    // Mouse drag
-    let isDragging=false,prevX=0,prevY=0;
-    container.addEventListener('mousedown',e=>{{isDragging=true;prevX=e.clientX;prevY=e.clientY}});
-    window.addEventListener('mouseup',()=>isDragging=false);
-    window.addEventListener('mousemove',e=>{{
-      if(!isDragging)return;
-      globe.rotation.y+=(e.clientX-prevX)*0.005;
-      globe.rotation.x+=(e.clientY-prevY)*0.005;
-      prevX=e.clientX;prevY=e.clientY;
+    // ── Stop Pins — added to earthGroup so they rotate ───────
+    const pulseRings = [];
+
+    const stopsToPlot = STOPS.length > 0 ? STOPS : [
+      {{lat:17.385, lon:78.487, name:"Hyderabad", fill:0}}
+    ];
+
+    stopsToPlot.forEach((s, i) => {{
+      const pos = ll3d(s.lat, s.lon, 1.0);
+      const col = pinColor(s.fill);
+
+      // Pin dot — bigger (0.04)
+      const pin = new THREE.Mesh(
+        new THREE.SphereGeometry(0.04, 12, 12),
+        new THREE.MeshBasicMaterial({{ color: col }})
+      );
+      pin.position.copy(pos.clone().multiplyScalar(1.02));
+      earthGroup.add(pin);
+
+      // Spike outward
+      const spike = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.004, 0.001, 0.1, 6),
+        new THREE.MeshBasicMaterial({{
+          color: col, transparent: true, opacity: 0.8
+        }})
+      );
+      spike.position.copy(pos.clone().multiplyScalar(1.07));
+      spike.lookAt(new THREE.Vector3(0, 0, 0));
+      spike.rotateX(Math.PI / 2);
+      earthGroup.add(spike);
+
+      // Pulse ring — bigger (0.05, 0.07)
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.05, 0.07, 16),
+        new THREE.MeshBasicMaterial({{
+          color: col, transparent: true,
+          opacity: 0.7, side: THREE.DoubleSide
+        }})
+      );
+      ring.position.copy(pos.clone().multiplyScalar(1.025));
+      ring.lookAt(new THREE.Vector3(0, 0, 0));
+      ring.userData.phase = i * 0.8;
+      earthGroup.add(ring);
+      pulseRings.push(ring);
     }});
 
-    function animate(){{
+    // ── Route Lines + Travelling Dots ─────────────────────────
+    const travelDots = [];
+
+    if (HAS_ROUTE && ROUTE.length > 1) {{
+      for (let i = 0; i < ROUTE.length - 1; i++) {{
+        const A   = ll3d(ROUTE[i].lat,   ROUTE[i].lon,   1.04);
+        const B   = ll3d(ROUTE[i+1].lat, ROUTE[i+1].lon, 1.04);
+        const mid = A.clone().add(B).multiplyScalar(0.5)
+                     .normalize().multiplyScalar(1.22);
+
+        const curve = new THREE.QuadraticBezierCurve3(A, mid, B);
+        const pts   = curve.getPoints(50);
+
+        // Glowing arc line
+        const line = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(pts),
+          new THREE.LineBasicMaterial({{
+            color: 0x00ff50, transparent: true, opacity: 0.9
+          }})
+        );
+        earthGroup.add(line);
+
+        // Travelling dot along arc
+        const dot = new THREE.Mesh(
+          new THREE.SphereGeometry(0.02, 8, 8),
+          new THREE.MeshBasicMaterial({{ color: 0x00ffaa }})
+        );
+        dot.position.copy(A);
+        earthGroup.add(dot);
+        travelDots.push({{
+          mesh: dot, curve: curve,
+          progress: i / ROUTE.length
+        }});
+
+        // Stop order marker
+        const marker = new THREE.Mesh(
+          new THREE.SphereGeometry(0.032, 10, 10),
+          new THREE.MeshBasicMaterial({{
+            color: 0x00ffaa, transparent: true, opacity: 0.95
+          }})
+        );
+        marker.position.copy(A.clone().multiplyScalar(1.03));
+        earthGroup.add(marker);
+      }}
+    }}
+
+    // ── Start facing India (Hyderabad lon=78°) ────────────────
+    earthGroup.rotation.y = -1.36;  // 78° in radians
+
+    // ── Mouse Drag ────────────────────────────────────────────
+    let isDragging = false, prevX = 0, prevY = 0;
+    let autoRotate = true;
+
+    container.addEventListener('mousedown', e => {{
+      isDragging = true;
+      autoRotate = false;
+      prevX = e.clientX;
+      prevY = e.clientY;
+    }});
+    window.addEventListener('mouseup', () => {{
+      isDragging = false;
+      setTimeout(() => {{ autoRotate = true; }}, 3000);
+    }});
+    window.addEventListener('mousemove', e => {{
+      if (!isDragging) return;
+      // Rotate the whole earthGroup together
+      earthGroup.rotation.y += (e.clientX - prevX) * 0.005;
+      earthGroup.rotation.x += (e.clientY - prevY) * 0.003;
+      prevX = e.clientX;
+      prevY = e.clientY;
+    }});
+
+    // Scroll to zoom
+    container.addEventListener('wheel', e => {{
+      camera.position.z = Math.max(1.5,
+        Math.min(5.0, camera.position.z + e.deltaY * 0.003));
+      e.preventDefault();
+    }}, {{passive: false}});
+
+    // ── Camera Flyover (after optimization) ───────────────────
+    let flyIndex  = 0;
+    let flyT      = 0;
+    let flyActive = false;
+    if (HAS_ROUTE && ROUTE.length > 1) {{
+      setTimeout(() => {{ flyActive = true; }}, 1500);
+    }}
+
+    // ── Animation Loop ────────────────────────────────────────
+    let t = 0;
+    function animate() {{
       requestAnimationFrame(animate);
-      if(!isDragging) globe.rotation.y+=0.003;
-      renderer.render(scene,camera);
+      t += 0.016;
+
+      // Auto rotate whole group
+      if (autoRotate && !isDragging) {{
+        earthGroup.rotation.y += 0.003;
+      }}
+
+      // Pulse rings
+      pulseRings.forEach(ring => {{
+        const sc = 1 + 0.4 * Math.abs(Math.sin(t * 2.5 + ring.userData.phase));
+        ring.scale.set(sc, sc, sc);
+        ring.material.opacity = 0.3 + 0.5 * Math.abs(Math.sin(t * 2.5 + ring.userData.phase));
+      }});
+
+      // Travelling dots along route
+      travelDots.forEach(d => {{
+        d.progress = (d.progress + 0.005) % 1;
+        d.mesh.position.copy(d.curve.getPoint(d.progress));
+      }});
+
+      // Camera flyover between stops
+      if (flyActive && !isDragging && ROUTE.length > 1) {{
+        flyT += 0.005;
+        if (flyT >= 1.0) {{
+          flyT = 0;
+          flyIndex = (flyIndex + 1) % (ROUTE.length - 1);
+        }}
+        const next = flyIndex + 1;
+        const camA = ll3d(ROUTE[flyIndex].lat, ROUTE[flyIndex].lon, 2.5);
+        const camB = ll3d(ROUTE[next].lat,     ROUTE[next].lon,     2.5);
+        const smooth = flyT * flyT * (3 - 2 * flyT);
+        camera.position.lerpVectors(camA, camB, smooth);
+        camera.lookAt(0, 0, 0);
+      }}
+
+      renderer.render(scene, camera);
     }}
+
     animate();
     </script>
-    """, height=430)
+    """, height=460)
+```
+
+---
+
+## The Key Fix Explained
+```
+OLD CODE — separate objects, pins don't follow globe:
+  scene.add(globe)       ← rotates
+  scene.add(wireframe)   ← doesn't rotate
+  scene.add(pin)         ← doesn't rotate
+  globe.rotation.y += X  ← only globe moves!
+
+NEW CODE — everything in ONE group:
+  earthGroup.add(globe)
+  earthGroup.add(wireframe)
+  earthGroup.add(pin)
+  earthGroup.rotation.y += X  ← EVERYTHING moves together!
 
 
 # ── 3D: PLOTLY SURFACE CHART ────────────────────────────────────
