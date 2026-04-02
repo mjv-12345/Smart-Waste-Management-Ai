@@ -14,7 +14,7 @@ import plotly.graph_objects as go
 from datetime import date
 import folium
 from streamlit_folium import st_folium
-
+import json
 st.set_page_config(
     page_title="EcoMind — Smart Waste AI",
     page_icon="♻",
@@ -22,7 +22,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-API = "http://127.0.0.1:8000"
+API = "https://smart-waste-backend-vtop.onrender.com"
 
 # ── FULL CSS ───────────────────────────────────────────────────
 st.markdown("""<style>
