@@ -620,12 +620,12 @@ with tab1:
         if predict_water_btn:
           
             payload = {
-              "Population": pop,
-              "Temperature_C": temp,
-              "Rainfall_mm": rain,
-              "Humidity_percent": humidity,
-              "Season": season,
-              "Day_Type": day_type
+              "Population": int(pop),
+              "Temperature_C": int(temp),
+              "Rainfall_mm": float(rain),
+              "Humidity_percent": float(humidity),
+              "Season": str(season),
+              "Day_Type": str(day_type)
             } 
             st.write("PAYLOAD SENT:", payload)
             response = requests.post(API + "/predict/water", json = payload)
