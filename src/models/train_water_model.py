@@ -147,7 +147,24 @@ def train_water_model():
     print(f"\n{'='*55}")
     print(f"  WATER MODEL TRAINING COMPLETE")
     print(f"{'='*55}\n")
-    return best["model_obj"], metrics_out
+    print(f"  WATER MODEL TRAINING COMPLETE")
+    print(f"{'='*55}\n")
 
+# ===== MANUAL TESTING =====
+    print("\n===== MANUAL TESTING =====")
+
+    test1 = [[200000, 40, 50, 60, 1, 0]]
+    test1_scaled = scaler.transform(test1)
+    print("Test 1:", best["model_obj"].predict(test1_scaled))
+
+    test2 = [[50000, 20, 200, 30, 0, 1]]
+    test2_scaled = scaler.transform(test2)
+    print("Test 2:", best["model_obj"].predict(test2_scaled))
+
+    test3 = [[100000, 30, 100, 50, 2, 0]]
+    test3_scaled = scaler.transform(test3)
+    print("Test 3:", best["model_obj"].predict(test3_scaled))
+    return best["model_obj"], metrics_out
+    print("X_train shape:", X_train.shape)
 if __name__ == "__main__":
     train_water_model()

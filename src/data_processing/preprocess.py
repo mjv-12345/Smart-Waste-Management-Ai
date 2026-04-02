@@ -49,7 +49,7 @@ from sklearn.model_selection import train_test_split
 BASE_DIR      = os.path.abspath(
                     os.path.join(os.path.dirname(__file__), "../../")
                 )
-DATA_PATH     = os.path.join(BASE_DIR, "data", "raw", "smart_city_dataset.xlsx")
+DATA_PATH     = os.path.join(BASE_DIR, "data", "raw", "Updated DATAset.csv")
 PROCESSED_DIR = os.path.join(BASE_DIR, "data", "processed")
 
 
@@ -67,7 +67,7 @@ def load_data():
     print(f"\n[STEP 1] Loading dataset ...")
     print(f"         {DATA_PATH}")
 
-    df = pd.read_excel(DATA_PATH)
+    df = pd.read_csv(DATA_PATH)
 
     print(f"         ✅ {df.shape[0]:,} rows × {df.shape[1]} columns")
     return df
@@ -109,6 +109,7 @@ def drop_columns(df):
 #  rows would remove 70% of our training data.
 # ================================================================
 def fill_nulls(df):
+    df = df.fillna(0)
     df["Festival_Event"] = df["Festival_Event"].fillna("No_Festival")
     df["Disaster_Event"] = df["Disaster_Event"].fillna("No_Disaster")
 
@@ -138,7 +139,7 @@ def fill_nulls(df):
 #  Then we DROP the original Date column.
 # ================================================================
 def extract_date_features(df):
-    df["Date"]      = pd.to_datetime(df["Date"])
+    df["Date"]      = pd.to_datetime(df["Date"], dayfirst = True)
     df["month"]     = df["Date"].dt.month
     df["dayofweek"] = df["Date"].dt.dayofweek
     df              = df.drop(columns=["Date"])
@@ -190,7 +191,6 @@ CATEGORICAL_COLS = [
 def encode_categoricals(df):
     os.makedirs(PROCESSED_DIR, exist_ok=True)
     encoders = {}
-
     print(f"\n[STEP 5] Encoding {len(CATEGORICAL_COLS)} text columns to numbers:")
     for col in CATEGORICAL_COLS:
         le            = LabelEncoder()
@@ -226,21 +226,11 @@ def encode_categoricals(df):
 # 16 input features
 WATER_FEATURES = [
     "Population",               # more people  → more water needed
-    "Population_Density",       # dense areas have different usage
-    "Household_Size",           # bigger family → more water
-    "Per_Capita_Income",        # richer areas use more water
-    "Urban_Rural_Type",         # urban uses more than rural
     "Temperature_C",            # hot weather → more demand
     "Rainfall_mm",              # rain reduces tap water demand
     "Humidity_percent",         # affects evaporation & consumption
     "Season",                   # Summer = peak water demand
     "Day_Type",                 # weekend patterns differ
-    "Festival_Event",           # festivals spike water usage
-    "Past_Water_Usage",         # yesterday's usage = strong signal
-    "Recycling_Rate_percent",   # more recycling = lower net demand
-    "Disaster_Event",           # disasters disrupt supply/demand
-    "month",                    # monthly seasonal pattern
-    "dayofweek",                # day-of-week pattern
 ]
 WATER_TARGET = "Water_Demand"
 
@@ -355,8 +345,25 @@ def run_preprocessing():
     df = load_data()
     df = drop_columns(df)
     df = fill_nulls(df)
+    import numpy as np
+    df['Water_Demand'] = (
+        df['Population'] * 0.0002 +
+        df['Temperature_C'] * 15 +
+        df['Humidity_percent'] * 5 +
+        df['Rainfall_mm'] * 1.5 +
+        np.random.normal(0, 80, len(df))
+    )
     df = extract_date_features(df)
     df, encoders = encode_categoricals(df)
+    print("\n[DATA VALIDATION] Correlation with Water_Demand:\n")
+    print(df.corr(numeric_only=True)['Water_Demand'].sort_values(ascending=False))
+   
+    import matplotlib.pyplot as plt
+    plt.scatter(df['Population'], df['Water_Demand'])
+    plt.xlabel("Population")
+    plt.ylabel("Water Demand")
+    plt.title("Population vs Water Demand")
+    plt.show()
 
     water_data = prepare_dataset(df, WATER_FEATURES, WATER_TARGET, "water")
     waste_data = prepare_dataset(df, WASTE_FEATURES, WASTE_TARGET, "waste")

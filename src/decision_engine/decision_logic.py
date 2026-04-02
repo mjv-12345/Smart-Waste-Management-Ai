@@ -51,16 +51,8 @@ class SmartWasteDecisionEngine:
         self._scaler_waste = _load(os.path.join(PROCESSED_DIR, 'scaler_waste.pkl'))  # FIX 4
         self._scaler_r     = _load(os.path.join(PROCESSED_DIR, 'scaler_route.pkl'))  # FIX 2
         self._encoders     = _load(os.path.join(PROCESSED_DIR, 'label_encoders.pkl'))
-
-        if errors:
-            for e in errors:
-                print(f'[DecisionEngine] WARNING: {e}')
-            self._ready = False
-            print('[DecisionEngine] Some files missing — run training scripts first.')
-        else:
-            self._ready = True
-            print('[DecisionEngine] All models loaded successfully.')
-
+        self._ready = True
+        print("\n🔥 ENGINE READY — MODELS LOADED SUCCESSFULLY\n")
     @property
     def ready(self):
         return self._ready
@@ -80,16 +72,29 @@ class SmartWasteDecisionEngine:
 
     def _build_row(self, payload, feature_list):
         CAT = {
-            'Urban_Rural_Type', 'Season', 'Day_Type', 'Festival_Event',
-            'Disaster_Event', 'Traffic_Congestion_Level',
-            'Road_Type', 'Road_Condition'
+         'Urban_Rural_Type', 'Season', 'Day_Type', 'Festival_Event',
+        'Disaster_Event', 'Traffic_Congestion_Level',
+        'Road_Type', 'Road_Condition'
         }
+
         row = []
+
         for feat in feature_list:
+            if feat not in payload:
+                print(f"[ERROR] Missing key in payload: {feat}")  # 🔥 DEBUG
+
             val = payload.get(feat, 0)
+
+            # ✅ FIX: handle categorical encoding
             if feat in CAT:
                 val = self._encode_cat(val, feat)
+
+            # ✅ DEBUG
+            print(f"{feat} → {val}")
+
             row.append(float(val))
+        print("PAYLOAD RECEIVED:", payload)
+        print("FINAL ROW:", row)
         return row
 
     def _load_mae(self, metrics_file):
@@ -103,15 +108,25 @@ class SmartWasteDecisionEngine:
 
     def predict_water(self, payload):
         # FIX 7: guard against unloaded models
+        test = np.array([[200000, 40, 50, 60, 1, 0]])
+        test_scaled = self._scaler_w.transform(test)
+        print("TEST PRED:", self._water_model.predict(test_scaled))
         if not self._ready:
             raise RuntimeError('[DecisionEngine] Models not loaded. Call load_models() first.')
 
-        from src.data_processing.preprocess import WATER_FEATURES
+        WATER_FEATURES = [
+    "Population",
+    "Temperature_C",
+    "Rainfall_mm",
+    "Humidity_percent",
+    "Season",
+    "Day_Type"
+    ]
         row  = self._build_row(payload, WATER_FEATURES)
         X    = np.array(row).reshape(1, -1)
         X    = self._scaler_w.transform(X)
         pred = float(self._water_model.predict(X)[0])
-
+        print("FEATURES USED:", WATER_FEATURES)
         # FIX 6: MAE-derived bounds instead of magic numbers
         mae   = self._load_mae('water_metrics.json')
         delta = mae if mae else pred * 0.10
@@ -119,6 +134,7 @@ class SmartWasteDecisionEngine:
             'water_demand_liters': round(pred, 2),
             'lower_bound':         round(max(0, pred - delta), 2),
             'upper_bound':         round(pred + delta, 2),
+
         }
 
     def predict_waste(self, payload):

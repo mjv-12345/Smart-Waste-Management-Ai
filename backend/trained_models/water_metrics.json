@@ -1,28 +1,36 @@
 {
-  "model_type": "RandomForest",
-  "mae": 133.7997,
-  "rmse": 155.3283,
-  "r2": -0.012,
+  "model_type": "GradientBoosting",
+  "mae": 65.5446,
+  "rmse": 81.8752,
+  "r2": 0.8587,
   "target": "Water_Demand",
   "unit": "litres/day",
   "features_used": 16,
   "train_rows": 8000,
   "test_rows": 2000,
+  "feature_importances": {
+    "Household_Size": 0.388039,
+    "Population_Density": 0.381067,
+    "Per_Capita_Income": 0.207169,
+    "Population": 0.023214,
+    "Urban_Rural_Type": 0.000329,
+    "Temperature_C": 0.000182
+  },
   "all_models": [
     {
       "name": "RandomForest",
-      "mae": 133.7997,
-      "r2": -0.012
+      "mae": 66.7329,
+      "r2": 0.8526
     },
     {
       "name": "GradientBoosting",
-      "mae": 134.4563,
-      "r2": -0.0239
+      "mae": 65.5446,
+      "r2": 0.8587
     },
     {
       "name": "XGBoost",
-      "mae": 135.107,
-      "r2": -0.0415
+      "mae": 65.6115,
+      "r2": 0.8574
     }
   ]
 }

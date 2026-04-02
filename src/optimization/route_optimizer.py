@@ -364,16 +364,20 @@ def optimize_route(stops, vehicle):
         })
 
     result = {
-        "optimized_route"    : ordered_stops,
-        "directions"         : directions,
-        "total_distance_km"  : round(o_dist, 2),
-        "total_time_min"     : round(total_time, 1),
-        "greedy_distance_km" : round(g_dist, 2),
-        "saved_km"           : round(g_dist - o_dist, 2),
-        "saved_percent"      : round(saved_pct, 1),
-        "num_stops"          : len(stops),
-        "algorithm"          : "Greedy + 2-opt"
-    }
+    "optimized_route"    : ordered_stops,
+    "ordered_stops"      : [stops[i] for i in optimized],
+    "directions"         : directions,
+    "total_distance_km"  : round(o_dist, 2),
+    "total_time_min"     : round(total_time, 1),
+    "greedy_distance_km" : round(g_dist, 2),
+    "saved_km"           : round(g_dist - o_dist, 2),
+    "saved_percent"      : round(saved_pct, 1),
+    "improvement_percent": round(saved_pct, 1),
+    "greedy_cost"        : round(g_cost, 2),
+    "total_cost_score"   : round(o_cost, 2),
+    "num_stops"          : len(stops),
+    "algorithm"          : "Greedy + 2-opt"
+}
 
     print(f"\n[OPTIMIZER] ✅ Done")
     print(f"            Route : {' → '.join(ordered_stops)}")

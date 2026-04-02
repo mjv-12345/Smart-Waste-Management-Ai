@@ -44,53 +44,23 @@ async def startup():
     else:
         print("[main.py] Engine ready. All models loaded.")
 
+class WastePayload(BaseModel):
+    Population: int = 50000
+    Temperature_C: float = 30.0
+    Rainfall_mm: float = 100.0
+    Season: str = "Summer"
+    Day_Type: str = "Weekday"
+
 
 # FIX 2: Festival/Disaster defaults match LabelEncoder values
 # FIX 3: dayofyear removed — not in WATER_FEATURES
 class WaterPayload(BaseModel):
     Population: int = 50000
-    Population_Density: float = 5000
-    Household_Size: int = 4
-    Per_Capita_Income: int = 300000
-    Urban_Rural_Type: str = "Urban"
-    Temperature_C: float = 30.0
+    Temperature_C: int = 40
     Rainfall_mm: float = 100.0
     Humidity_percent: float = 60.0
     Season: str = "Summer"
     Day_Type: str = "Weekday"
-    Festival_Event: str = "No_Festival"    # FIX 2
-    Disaster_Event: str = "No_Disaster"    # FIX 2
-    Past_Water_Usage: float = 300.0
-    Recycling_Rate_percent: float = 30.0
-    month: int = 4
-    dayofweek: int = 2
-
-
-# FIX 2: Festival/Disaster defaults fixed
-# FIX 3: dayofyear removed — not in WASTE_FEATURES
-# FIX 4: Removed Area_ID, Household_Size, Per_Capita_Income,
-#         Urban_Rural_Type, Humidity_percent — not in WASTE_FEATURES
-class WastePayload(BaseModel):
-    Population: int = 50000
-    Population_Density: float = 5000
-    Temperature_C: float = 30.0
-    Rainfall_mm: float = 100.0
-    Season: str = "Summer"
-    Day_Type: str = "Weekday"
-    Festival_Event: str = "No_Festival"    # FIX 2
-    Disaster_Event: str = "No_Disaster"    # FIX 2
-    Past_Waste_t1_tons: float = 150.0
-    Past_Waste_t7_tons: float = 1050.0
-    Past_Waste_t30_tons: float = 4500.0
-    Organic_Waste_percent: float = 50.0
-    Plastic_Waste_percent: float = 20.0
-    Paper_Waste_percent: float = 10.0
-    Other_Waste_percent: float = 10.0
-    Collection_Frequency_per_week: int = 3
-    Recycling_Rate_percent: float = 30.0
-    month: int = 4
-    dayofweek: int = 2
-
 
 # FIX 6: road_type alias handled in validator — not inline in endpoint
 class StopItem(BaseModel):
