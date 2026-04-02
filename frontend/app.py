@@ -22,6 +22,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+
 API = "https://smart-waste-backend-vtop.onrender.com"
 
 # ── FULL CSS ───────────────────────────────────────────────────
@@ -617,15 +618,19 @@ with tab1:
 
     with col_result:
         if predict_water_btn:
-            d = sel_date
+          
             payload = {
-           "Population": pop,
-           "Temperature_C": temp,
-           "Rainfall_mm": rain,
-           "Humidity_percent": humidity,
-           "Season": season,
-           "Day_Type": day_type
-}
+              "Population": pop,
+              "Temperature_C": temp,
+              "Rainfall_mm": rain,
+              "Humidity_percent": humidity,
+              "Season": season,
+              "Day_Type": day_type
+            } 
+            st.write("PAYLOAD SENT:", payload)
+            response = requests.post(API + "/predict/water", json = payload)
+            data = response.json()
+            st.success(f"Water Demand: {data['prediction']['water_demand_litres']}")
             with st.spinner("Running model inference…"):
                 resp = api_post("/predict/water", payload)
             if "error" in resp:
