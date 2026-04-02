@@ -619,23 +619,13 @@ with tab1:
         if predict_water_btn:
             d = sel_date
             payload = {
-                "Population":             pop,
-                "Population_Density":     pop_den,
-                "Household_Size":         hh_size,
-                "Per_Capita_Income":      income,
-                "Urban_Rural_Type":       urban,
-                "Temperature_C":          temp,
-                "Rainfall_mm":            rain,
-                "Humidity_percent":       humidity,
-                "Season":                 season,
-                "Day_Type":               day_type,
-                "Festival_Event":         festival,
-                "Disaster_Event":         "No_Disaster",
-                "Past_Water_Usage":       past_water,
-                "Recycling_Rate_percent": recycle,
-                "month":                  d.month,
-                "dayofweek":              d.weekday()
-            }
+           "Population": pop,
+           "Temperature_C": temp,
+           "Rainfall_mm": rain,
+           "Humidity_percent": humidity,
+           "Season": season,
+           "Day_Type": day_type
+}
             with st.spinner("Running model inference…"):
                 resp = api_post("/predict/water", payload)
             if "error" in resp:
