@@ -595,63 +595,105 @@ tab1, tab2, tab3 = st.tabs([
 with tab1:
     col_form, _, col_result = st.columns([1.05, 0.05, 1])
 
+    # ------------------ INPUT FORM ------------------
     with col_form:
-        st.markdown('<div style="font-family:Share Tech Mono,monospace;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(0,255,80,.4);margin-bottom:6px">Area & Demographics</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="font-family:Share Tech Mono,monospace;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(0,255,80,.4);margin-bottom:6px">Area & Demographics</div>',
+            unsafe_allow_html=True
+        )
+
         c1, c2 = st.columns(2)
         pop     = c1.number_input("Population", 1000, 1000000, 27836, step=1000)
         pop_den = c2.number_input("Pop. Density /km²", 100.0, 50000.0, 22342.0)
         hh_size = c1.number_input("Household Size", 1, 12, 6)
         income  = c2.number_input("Per Capita Income ₹", 50000, 1000000, 355551, step=10000)
         urban   = c1.selectbox("Urban / Rural", ["Urban", "Rural"])
+
         c3, c4 = st.columns(2)
         temp     = c3.slider("Temperature °C", 5.0, 50.0, 35.4)
         rain     = c4.slider("Rainfall mm", 0.0, 400.0, 182.5)
         humidity = c3.slider("Humidity %", 10.0, 100.0, 71.6)
         season   = c4.selectbox("Season", ["Summer", "Monsoon", "Winter"])
+
         c5, c6 = st.columns(2)
-        day_type   = c5.selectbox("Day Type", ["Weekday", "Weekend"])
-        festival   = c6.selectbox("Festival", ["No_Festival", "Local_Festival", "National_Festival"])
+        day_type = c5.selectbox("Day Type", ["Weekday", "Weekend"])
+        festival = c6.selectbox("Festival", ["No_Festival", "Local_Festival", "National_Festival"])
+
         past_water = st.number_input("Past Water Usage L", 50.0, 800.0, 399.29)
         recycle    = st.slider("Recycling Rate %", 0.0, 100.0, 30.7)
         sel_date   = st.date_input("Forecast Date", date.today())
+
         predict_water_btn = st.button("▸ Predict Water Demand", use_container_width=True)
 
+    # ------------------ RESULT SECTION ------------------
     with col_result:
+
         if predict_water_btn:
-          
+
             payload = {
-              "Population": int(pop),
-              "Temperature_C": int(temp),
-              "Rainfall_mm": float(rain),
-              "Humidity_percent": float(humidity),
-              "Season": str(season),
-              "Day_Type": str(day_type)
-            } 
+                "Population": int(pop),
+                "Temperature_C": int(temp),
+                "Rainfall_mm": float(rain),
+                "Humidity_percent": float(humidity),
+                "Season": str(season),
+                "Day_Type": str(day_type)
+            }
+
             st.write("PAYLOAD SENT:", payload)
-            response = requests.post(API + "/predict/water", json = payload)
-            data = response.json()
-            st.success(f"Water Demand: {data['prediction']['water_demand_litres']}")
-            with st.spinner("Running model inference…"):
-                resp = api_post("/predict/water", payload)
-            if "error" in resp:
-                st.error(resp["error"])
-            else:
-                pred = resp["prediction"]
+
+            try:
+                with st.spinner("Running model inference…"):
+                    response = requests.post(API + "/predict/water", json=payload)
+                    data = response.json()
+
+                st.write("API RESPONSE:", data)
+
+                pred = data["prediction"]
                 val  = pred["water_demand_liters"]
                 lo   = pred["lower_bound"]
                 hi   = pred["upper_bound"]
-                render_animated_counter("Predicted Water Demand", val, "Litres / Day", f"{lo:,.0f} L", f"{hi:,.0f} L")
+
+                # ✅ MAIN RESULT
+                st.success(f"💧 Water Demand: {val:.2f} Liters")
+
+                # ✅ OPTIONAL ADVANCED UI
+                render_animated_counter(
+                    "Predicted Water Demand",
+                    val,
+                    "Litres / Day",
+                    f"{lo:,.0f} L",
+                    f"{hi:,.0f} L"
+                )
+
                 st.markdown("<br>", unsafe_allow_html=True)
+
+                # Feature importance (optional)
                 fi = health.get("metrics", {}).get("water", {}).get("feature_importances", {})
                 if fi:
-                    st.markdown('<div style="font-family:Share Tech Mono,monospace;font-size:.6rem;letter-spacing:.15em;color:rgba(0,255,80,.4)">FEATURE IMPORTANCE</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        '<div style="font-family:Share Tech Mono,monospace;font-size:.6rem;letter-spacing:.15em;color:rgba(0,255,80,.4)">FEATURE IMPORTANCE</div>',
+                        unsafe_allow_html=True
+                    )
                     fi_df = pd.DataFrame(list(fi.items())[:8], columns=["Feature", "Importance"])
                     st.bar_chart(fi_df.set_index("Feature"), color="#00ff50", height=200)
+
                 st.markdown("<br>", unsafe_allow_html=True)
-                st.markdown('<div style="font-family:Share Tech Mono,monospace;font-size:.6rem;letter-spacing:.15em;color:rgba(0,255,80,.4)">3D DEMAND SURFACE: Temperature × Population</div>', unsafe_allow_html=True)
+
+                # 3D visualization
+                st.markdown(
+                    '<div style="font-family:Share Tech Mono,monospace;font-size:.6rem;letter-spacing:.15em;color:rgba(0,255,80,.4)">3D DEMAND SURFACE: Temperature × Population</div>',
+                    unsafe_allow_html=True
+                )
                 render_3d_surface(val)
+
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
+
         else:
-            st.markdown('<div style="background:rgba(0,255,80,.02);border:1px dashed rgba(0,255,80,.15);border-radius:6px;padding:4rem 2rem;text-align:center"><div style="font-family:Orbitron,sans-serif;font-size:.85rem;color:rgba(0,255,80,.3)">Set parameters and run prediction</div></div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div style="background:rgba(0,255,80,.02);border:1px dashed rgba(0,255,80,.15);border-radius:6px;padding:4rem 2rem;text-align:center"><div style="font-family:Orbitron,sans-serif;font-size:.85rem;color:rgba(0,255,80,.3)">Set parameters and run prediction</div></div>',
+                unsafe_allow_html=True
+            )
 
 
 # ══════════════════════════════════════════════════════════════
